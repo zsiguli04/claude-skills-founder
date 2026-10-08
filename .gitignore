@@ -9,3 +9,5 @@ __pycache__/
 .hypothesis/
 *.egg-info/
 .venv/
+*.sqlite3
+*.sqlite3-journal

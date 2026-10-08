@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }}{% endblock %}
+{% block content %}
+<div class="heading">
+  <div>
+    <h1>{{ client.name }}</h1>
+    <p class="muted">{{ KIND_LABELS[client.kind] }} · {{ "Belföldi illetőségű" if client.resident else "Külföldi illetőségű" }}
+      · <a href="/clients/{{ client.id }}/edit">Szerkesztés</a></p>
+    {% if client.notes %}<p class="notes">{{ client.notes }}</p>{% endif %}
+  </div>
+  <form method="post" action="/clients/{{ client.id }}/calculate">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button>Számítás mentése és jelentés</button>
+  </form>
+</div>
+
+{% if preview_error %}<p class="error">{{ preview_error }}</p>{% endif %}
+{% if preview %}
+<section class="summary">
+  <div><span>Bruttó vagyon</span><strong>{{ preview.gross_assets | huf }}</strong></div>
+  <div><span>Levont tartozás</span><strong>{{ preview.debts | huf }}</strong></div>
+  <div><span>Nettó vagyon</span><strong>{{ preview.net_wealth | huf }}</strong></div>
+  <div><span>Adóalap (1 Mrd felett)</span><strong>{{ preview.tax_base | huf }}</strong></div>
+  <div class="highlight"><span>Becsült vagyonadó</span><strong>{{ preview.tax | huf }}</strong></div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="heading">
+    <h2>Vagyonelemek</h2>
+    <div class="actions">
+      Új:
+      <a href="/clients/{{ client.id }}/assets/new?kind=real_estate_purchase">ingatlan vételár alapján</a> ·
+      <a href="/clients/{{ client.id }}/assets/new?kind=unlisted_company">nem tőzsdei cég</a> ·
+      <a href="/clients/{{ client.id }}/assets/new?kind=manual">egyéb, megadott értékkel</a>
+    </div>
+  </div>
+  {% if assets %}
+  <table>
+    <thead><tr><th>Megnevezés</th><th>Fajta</th><th>Ország</th><th class="num">Hányad</th><th class="num">Teljes érték</th><th>Módszer</th><th>Figyelembe véve</th><th></th></tr></thead>
+    <tbody>
+    {% set lines = preview.lines if preview else [] %}
+    {% for a in assets %}
+      {% set line = (lines | selectattr("name", "equalto", a.name) | selectattr("kind", "equalto", "asset") | first) if lines else none %}
+      <tr>
+        <td>{{ a.name }}</td>
+        <td>{{ CATEGORY_LABELS[a.category] }}</td>
+        <td>{{ a.location }}</td>
+        <td class="num">{{ a.ownership_share | percent }}</td>
+        <td class="num">{{ a.value | huf }}</td>
+        <td class="small">{{ a.method | hu }}</td>
+        <td class="small">{% if line %}{{ "igen" if line.included else line.reason | hu }}{% endif %}</td>
+        <td>
+          <form method="post" action="/clients/{{ client.id }}/assets/{{ a.id }}/delete" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="link danger">Törlés</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Még nincs vagyonelem.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Tartozások</h2>
+  {% if debts %}
+  <table>
+    <thead><tr><th>Megnevezés</th><th class="num">Összeg</th><th>Fedezet</th><th></th></tr></thead>
+    <tbody>
+    {% for d in debts %}
+      <tr>
+        <td>{{ d.name }}</td>
+        <td class="num">{{ d.amount | huf }}</td>
+        <td>{{ d.secured_on or "nincs" }}</td>
+        <td>
+          <form method="post" action="/clients/{{ client.id }}/debts/{{ d.id }}/delete" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="link danger">Törlés</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if debt_error %}<p class="error">{{ debt_error }}</p>{% endif %}
+  <form method="post" action="/clients/{{ client.id }}/debts/new" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Megnevezés <input name="name" required maxlength="200"></label>
+    <label>Fennálló összeg (Ft) <input name="amount" required inputmode="decimal" placeholder="250 000 000"></label>
+    <label>Fedezet / finanszírozott vagyonelem
+      <select name="secured_on_asset_id">
+        <option value="">nincs</option>
+        {% for a in assets %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button>Tartozás hozzáadása</button>
+  </form>
+  {% if not client.resident %}<p class="hint">Külföldi illetőségűnél csak a figyelembe vett vagyonelemhez kötött tartozást vonjuk le (feltételezés, a tervezet szövegével ellenőrizendő).</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Mentett számítások</h2>
+  {% if calcs %}
+  <table>
+    <thead><tr><th>Időpont (UTC)</th><th>Szabály</th><th class="num">Adó</th><th>Készítette</th></tr></thead>
+    <tbody>
+    {% for c in calcs %}
+      <tr>
+        <td><a href="/calculations/{{ c.id }}">{{ c.created_at }}</a></td>
+        <td>{{ c.rule_key }} <span class="tag">{{ c.rule_status }}</span></td>
+        <td class="num">{{ c.tax | huf }}</td>
+        <td>{{ c.by_name }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Még nincs mentett számítás.</p>
+  {% endif %}
+</section>
+
+<details class="card">
+  <summary>Ügyfél törlése</summary>
+  <form method="post" action="/clients/{{ client.id }}/delete" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>A megerősítéshez írd be a nevet: <input name="confirm_name" required></label>
+    <button class="danger">Végleges törlés</button>
+  </form>
+  <p class="hint">A törlés a vagyonelemeket, tartozásokat és mentett számításokat is törli. A naplóbejegyzések megmaradnak.</p>
+</details>
+{% endblock %}

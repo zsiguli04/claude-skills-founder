@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Vagyonadó{% endblock %} · Vagyonadó-iroda</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">Vagyonadó-iroda</a>
+  {% if user %}
+  <nav>
+    <a href="/">Ügyfelek</a>
+    <a href="/clients/new">Új ügyfél</a>
+    <form method="post" action="/logout" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="link">Kilépés ({{ user }})</button>
+    </form>
+  </nav>
+  {% endif %}
+</header>
+<div class="draft-banner">
+  A vagyonadó jelenleg <strong>törvénytervezet</strong> (társadalmi egyeztetés 2026. október 6. és 14. között), nem hatályos jog.
+  Minden szám becslés a tervezet sajtóban és tanácsadói összefoglalókban közölt szabályai alapján.
+</div>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>Belső eszköz. Az eredmények nem minősülnek adótanácsadásnak; a végleges törvény szövegével ellenőrizni kell.</footer>
+</body>
+</html>

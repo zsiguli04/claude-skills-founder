@@ -76,6 +76,13 @@
     - "Minority discount edges (exactly 33%, exactly 50%) are assumptions: 33% gets 25%, 50% gets 25%, above 50% none."
     - "Assets given to a minor child count in the parent's base unless inherited or earned by the child. Not modeled: put them in the parent's asset list."
     - "Foreign wealth taxes are not creditable; only local property-type taxes may be. Not modeled."
+  notes_hu:
+    - "Társadalmi egyeztetésen lévő törvénytervezet (2026. október 14-ig). A kulcsok, az értékhatár, a mentességek és a határidők a parlamenti elfogadásig változhatnak."
+    - "Az adó egész forintra kerekítése feltételezés; a törvényjavaslat és az Art. (2017. évi CL. törvény) kerekítési szabályai alapján ellenőrizendő."
+    - "A források eltérnek a kezdésről: egyesek szerint az első kötelezettség a 2026. december 31-i állapot után keletkezik, mások szerint az adó 2027. január 1-jétől él."
+    - "A kisebbségi kedvezmény határai feltételezések: pontosan 33% és pontosan 50% esetén 25%, 50% felett nincs kedvezmény."
+    - "A kiskorú gyermeknek juttatott vagyon a szülő adóalapjába tartozik, kivéve az örökölt vagy saját keresetből szerzett vagyont. Ezt a szülő vagyonelemei között kell felvenni."
+    - "A külföldön fizetett vagyonadó nem számítható be, legfeljebb a helyi, ingatlanadó jellegű adók. Ezt a számítás nem kezeli."
 
 # Trusts and private foundations (vagyonkezelési adóalany). Same threshold and
 # rates as individuals, but linked structures (same or related settlors) share
@@ -99,3 +106,7 @@
     - "Draft bill under public consultation until 2026-10-14."
     - "Linked trusts and foundations of the same or related settlors share one 1bn threshold: pass all their assets to one compute() call."
     - "A foreign structure becomes a Hungarian taxpayer if it is effectively managed from Hungary. Residency is the caller's call."
+  notes_hu:
+    - "Társadalmi egyeztetésen lévő törvénytervezet (2026. október 14-ig)."
+    - "Az ugyanazon vagy egymással kapcsolatban álló vagyonrendelőkhöz tartozó vagyonkezelések és magánalapítványok együtt egyszer kapják meg az 1 milliárd forintos értékhatárt: ezért egy ügyfélként szerepelnek."
+    - "A külföldön létrehozott konstrukció magyar adóalannyá válik, ha tényleges irányítása Magyarországról történik. Az illetőséget a tanácsadó állapítja meg."

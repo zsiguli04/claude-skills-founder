@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Új vagyonelem{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <p><a href="/clients/{{ client.id }}">&larr; {{ client.name }}</a></p>
+  <h1>Új vagyonelem</h1>
+  <p class="muted">{{ VALUATION_KINDS[kind] }}</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/clients/{{ client.id }}/assets/new">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="valuation_kind" value="{{ kind }}">
+    <label>Megnevezés <input name="name" value="{{ values.name or '' }}" required maxlength="200" placeholder="pl. Budapest, II. ker. lakás"></label>
+    <label>Fajta
+      <select name="category">
+        {% for key, label in CATEGORY_LABELS.items() %}
+        <option value="{{ key }}" {% if values.category == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Ország (ISO-kód; cégnél a bejegyzés helye) <input name="location" value="{{ values.location or 'HU' }}" maxlength="2" required></label>
+
+    {% if kind == "manual" %}
+      <label>Érték a fordulónapon, a teljes vagyonelemre (Ft) <input name="value" value="{{ values.value or '' }}" required inputmode="decimal"></label>
+      <label>Tulajdoni hányad (%) <input name="ownership_share" value="{{ values.ownership_share or '100' }}" inputmode="decimal"></label>
+      <label>Értékelési módszer <input name="method" value="{{ values.method or '' }}" required maxlength="300"
+        placeholder="pl. záróárfolyam 2026.12.30., bankszámla-egyenleg, NAV-modell, értékbecslés"></label>
+      <p class="hint">Devizás vagyonelemnél add meg a forintértéket, és írd a módszerhez az árfolyamot és forrását (a tervezet átváltási szabályát még nem ismerjük).
+      Ingóságnál a darabonkénti érték számít: személyes ingóság 1 millió, gépkocsi 10 millió, műtárgy és ékszer 3 millió Ft-ig kimarad.</p>
+    {% elif kind == "real_estate_purchase" %}
+      <label>Szerzés dátuma <input type="date" name="acquired_on" value="{{ values.acquired_on or '' }}" required></label>
+      <label>Vételár, a teljes ingatlanra (Ft) <input name="purchase_price" value="{{ values.purchase_price or '' }}" required inputmode="decimal"></label>
+      <label>Tulajdoni hányad (%) <input name="ownership_share" value="{{ values.ownership_share or '100' }}" inputmode="decimal"></label>
+      <label>MNB lakásárindex a szerzéskor <input name="index_at_purchase" value="{{ values.index_at_purchase or '' }}" inputmode="decimal"></label>
+      <label>MNB lakásárindex a fordulónapon <input name="index_at_valuation" value="{{ values.index_at_valuation or '' }}" inputmode="decimal"></label>
+      <p class="hint">12 hónapon belüli szerzésnél a vételár számít, az index nem kell. 1-10 év között a vételárat az indexek arányával szorozzuk.
+      10 évnél régebbi szerzésnél NAV-modell vagy értékbecslés kell: azt „egyéb, megadott értékkel” vedd fel.</p>
+    {% elif kind == "unlisted_company" %}
+      <label>Saját tőke, utolsó lezárt üzleti év (Ft) <input name="equity" value="{{ values.equity or '' }}" required inputmode="decimal"></label>
+      <label>Adózott eredmény, utolsó lezárt év (Ft) <input name="profit_1" value="{{ values.profit_1 or '' }}" required inputmode="decimal"></label>
+      <label>Adózott eredmény, előző év (Ft) <input name="profit_2" value="{{ values.profit_2 or '' }}" required inputmode="decimal"></label>
+      <label>Adózott eredmény, két évvel korábban (Ft) <input name="profit_3" value="{{ values.profit_3 or '' }}" required inputmode="decimal"></label>
+      <label>Tulajdoni hányad (%) <input name="ownership_share" value="{{ values.ownership_share or '100' }}" required inputmode="decimal"></label>
+      <label>Rejtett tartalék, könyvvizsgáló által felülvizsgált (Ft) <input name="hidden_reserves" value="{{ values.hidden_reserves or '' }}" inputmode="decimal"></label>
+      <label>Részesedések aránya az eszközökben (%) <input name="participations_to_assets" value="{{ values.participations_to_assets or '' }}" inputmode="decimal"></label>
+      <p class="hint">Képlet: (saját tőke + 2 × hozamérték) / 3 × hányad, ahol a hozamérték a 3 év átlagos adózott eredménye / 15%.
+      500 millió Ft saját tőke felett a rejtett tartalék kötelező (ha nincs, írj 0-t). Legalább 90% részesedésaránynál holdingként csak a saját tőke számít.
+      Kisebbségi kedvezmény: 33-50% között 25%, 33% alatt 30%.</p>
+    {% endif %}
+    <button>Mentés</button>
+    <a href="/clients/{{ client.id }}">Mégse</a>
+  </form>
+</section>
+{% endblock %}

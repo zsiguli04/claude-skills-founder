@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Ügyfelek{% endblock %}
+{% block content %}
+<div class="heading">
+  <h1>Ügyfelek</h1>
+  <a class="button" href="/clients/new">Új ügyfél</a>
+</div>
+{% if clients %}
+<table>
+  <thead><tr><th>Név</th><th>Típus</th><th>Illetőség</th><th class="num">Vagyonelemek</th><th class="num">Utolsó számított adó</th></tr></thead>
+  <tbody>
+  {% for c in clients %}
+    <tr>
+      <td><a href="/clients/{{ c.id }}">{{ c.name }}</a></td>
+      <td>{{ "Magánszemély" if c.kind == "individual" else "Vagyonkezelési adóalany" }}</td>
+      <td>{{ "Belföldi" if c.resident else "Külföldi" }}</td>
+      <td class="num">{{ c.asset_count }}</td>
+      <td class="num">{{ c.last_tax | huf if c.last_tax is not none else "nincs még" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Még nincs ügyfél. <a href="/clients/new">Vegyél fel egyet.</a></p>
+{% endif %}
+{% endblock %}

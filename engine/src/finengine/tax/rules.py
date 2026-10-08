@@ -72,6 +72,8 @@ class Rule:
     # Named thresholds and ratios a tax-specific module needs (exemption limits,
     # capitalization rates). Kept in the rule file so no number lives in code.
     parameters: dict[str, Decimal] = field(default_factory=dict)
+    # Translations of `notes` for user-facing reports, keyed by language: notes_hu -> "hu".
+    localized_notes: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     def param(self, name: str) -> Decimal:
         if name not in self.parameters:
@@ -189,6 +191,11 @@ def parse_rule(raw: dict, origin: str = "<rule>") -> Rule:
         filing_due=optional_date("filing_due"),
         notes=tuple(str(n) for n in raw.get("notes") or ()),
         parameters=parameters,
+        localized_notes={
+            k.removeprefix("notes_"): tuple(str(n) for n in v or ())
+            for k, v in raw.items()
+            if k.startswith("notes_")
+        },
     )
 
 

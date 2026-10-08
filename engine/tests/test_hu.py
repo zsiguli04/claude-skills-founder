@@ -282,3 +282,9 @@ def test_rule_parameters_must_be_quoted_and_present(wealth_rule):
     }
     with pytest.raises(RuleError, match="quoted"):
         parse_rule(raw)
+
+
+def test_hungarian_notes_for_reports(wealth_rule, rules):
+    assert len(wealth_rule.localized_notes["hu"]) == len(wealth_rule.notes)
+    trust = rules.find("HU", "wealth", 2026, "trust", allow_unenacted=True)
+    assert len(trust.localized_notes["hu"]) == len(trust.notes)

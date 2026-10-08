@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Jelentés: {{ inputs.client.name }}{% endblock %}
+{% block content %}
+<article class="report">
+  <p class="noprint"><a href="/clients/{{ calc.client_id }}">&larr; Vissza az ügyfélhez</a> ·
+    <a href="/calculations/{{ calc.id }}/export.json">Letöltés JSON-ban</a> · Nyomtatás vagy PDF: Ctrl+P</p>
+
+  <h1>Vagyonadó-becslés: {{ inputs.client.name }}</h1>
+  {% if out.rule.status != "enacted" %}
+  <p class="warning"><strong>TERVEZET ALAPJÁN.</strong> A vagyonadóról szóló törvény még nincs elfogadva. Ez becslés a {{ out.rule.retrieved }}-i állapot szerint; a kulcsok, határok és határidők változhatnak.</p>
+  {% endif %}
+
+  <table class="meta">
+    <tr><th>Adóalany</th><td>{{ KIND_LABELS[inputs.client.kind] }}, {{ "belföldi" if inputs.client.resident else "külföldi" }} illetőségű</td></tr>
+    <tr><th>Fordulónap</th><td>{{ out.rule.valuation_date }}</td></tr>
+    <tr><th>Bevallás és befizetés határideje</th><td>{{ out.rule.filing_due }}</td></tr>
+    <tr><th>Alkalmazott szabály</th><td>{{ out.rule.key }} ({{ out.rule.status }})</td></tr>
+    <tr><th>Készült</th><td>{{ calc.created_at }} (UTC), {{ calc.by_name }}</td></tr>
+    <tr><th>Verzió</th><td>motor {{ out.engine_version }}, alkalmazás {{ out.app_version }}, számítás #{{ calc.id }}</td></tr>
+  </table>
+
+  <h2>Összegzés</h2>
+  <section class="summary">
+    <div><span>Bruttó vagyon</span><strong>{{ out.gross_assets | huf }}</strong></div>
+    <div><span>Levont tartozás</span><strong>{{ out.debts | huf }}</strong></div>
+    <div><span>Nettó vagyon</span><strong>{{ out.net_wealth | huf }}</strong></div>
+    <div><span>Adóalap</span><strong>{{ out.tax_base | huf }}</strong></div>
+    <div class="highlight"><span>Becsült vagyonadó</span><strong>{{ out.tax | huf }}</strong></div>
+  </section>
+  <p>A nettó vagyonra vetített adó {{ out.effective_rate_on_net_wealth | percent(3) }}, a legmagasabb alkalmazott kulcs {{ out.marginal_rate | percent }}.</p>
+
+  <h2>Vagyonelemek és tartozások</h2>
+  <table>
+    <thead><tr><th>Tétel</th><th class="num">Figyelembe vett összeg</th><th>Módszer</th><th>Figyelembe véve</th></tr></thead>
+    <tbody>
+    {% for l in out.lines %}
+      <tr class="{{ '' if l.included else 'excluded' }}">
+        <td>{{ "Tartozás: " if l.kind == "debt" else "" }}{{ l.name }}</td>
+        <td class="num">{{ l.amount | huf }}</td>
+        <td class="small">{{ l.method | hu }}</td>
+        <td class="small">{{ "igen" if l.included else l.reason | hu }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Adószámítás sávonként</h2>
+  <table>
+    <thead><tr><th>Nettó vagyon sávja</th><th class="num">Kulcs</th><th class="num">Sávba eső összeg</th><th class="num">Adó</th></tr></thead>
+    <tbody>
+    {% for b in out.brackets %}
+      <tr>
+        <td>{{ b.lower | huf }} - {{ (b.upper | huf) if b.upper else "felett" }}</td>
+        <td class="num">{{ b.rate | percent }}</td>
+        <td class="num">{{ b.taxed_amount | huf }}</td>
+        <td class="num">{{ b.tax | huf(2) }}</td>
+      </tr>
+    {% endfor %}
+      <tr class="total"><td colspan="3">Összesen (kerekítve)</td><td class="num">{{ out.tax | huf }}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Feltételezések és nyitott kérdések</h2>
+  <ul>
+    {% for n in (out.rule.notes_hu or out.rule.notes) %}<li>{{ n }}</li>{% endfor %}
+    {% if not inputs.client.resident %}<li>Külföldi illetőségűnél csak a figyelembe vett vagyonelemhez kötött tartozást vontuk le (feltételezés).</li>{% endif %}
+  </ul>
+
+  <h2>Forrás</h2>
+  <p class="small">{{ out.rule.citation }}<br>{{ out.rule.url }} (letöltve: {{ out.rule.retrieved }})</p>
+
+  <p class="disclaimer">Ez a dokumentum tájékoztató becslés, nem adótanácsadás és nem hivatalos adóbevallás. A végleges törvény és a NAV útmutatója alapján ellenőrizni kell.</p>
+</article>
+{% endblock %}
