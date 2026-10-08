@@ -1,0 +1,20 @@
+# Hungarian personal income tax (SZJA), flat rate.
+- id: hu-szja-individual
+  version: 1
+  status: enacted
+  jurisdiction: HU
+  tax_type: income
+  tax_year: 2026
+  filing_status: individual
+  effective_from: 2026-01-01
+  effective_to: 2026-12-31
+  brackets:
+    - { up_to: null, rate: "0.15" }
+  rounding: { quantum: "1", mode: half_up }
+  source:
+    citation: "1995. évi CXVII. törvény a személyi jövedelemadóról, 8. § (1). Rate confirmed via secondary sources (hvg, proab) on 2026-10-08; statute text not read directly."
+    url: "https://net.jogtar.hu/jogszabaly?docid=99500117.tv"
+    retrieved: 2026-10-08
+  notes:
+    - "Flat rate only. Allowances (családi kedvezmény, under-25 and mothers' exemptions, personal allowance) are not modeled."
+    - "The government plans a tax credit from 2027 that lowers the effective rate below the median wage (9% at minimum wage). Not enacted; not modeled."

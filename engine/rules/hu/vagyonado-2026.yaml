@@ -1,0 +1,37 @@
+# Hungarian wealth tax (vagyonadó), draft bill.
+# Status: DRAFT. Published for public consultation by the Ministry of Finance
+# on 2026-10-06; comments close 2026-10-14. Not passed by Parliament.
+# See RESEARCH.md for sources, open questions, and what the engine does not model yet.
+#
+# Brackets are on NET WEALTH, not on the tax base. The draft defines the base
+# as net wealth above HUF 1 billion, taxed at 1% on the first HUF 100 billion of
+# the base and 1.5% above it. In net-wealth terms: 0% to 1bn, 1% to 101bn, 1.5% above.
+- id: hu-vagyonado-individual
+  version: 1
+  status: draft
+  jurisdiction: HU
+  tax_type: wealth
+  tax_year: 2026
+  filing_status: individual   # each spouse is assessed separately, each with their own 1bn threshold
+  effective_from: 2026-12-15  # reported entry into force of the act
+  effective_to: 2026-12-31
+  valuation_date: 2026-12-31
+  filing_due: 2027-08-31
+  brackets:
+    - { up_to: "1000000000", rate: "0" }
+    - { up_to: "101000000000", rate: "0.01" }
+    - { up_to: null, rate: "0.015" }
+  rounding: { quantum: "1", mode: half_up }
+  source:
+    citation: "Pénzügyminisztérium: törvényjavaslat a vagyonadóról, társadalmi egyeztetés (2026-10-06). Not read directly: details from Andersen, RSM, BDO, Infostart summaries."
+    url: "https://kormany.hu/dokumentumtar/tarsadalmi-egyeztetes-a-vagyonadorol-szolo-torvenyjavaslatrol"
+    retrieved: 2026-10-08
+  notes:
+    - "Draft bill under public consultation until 2026-10-14. Rates, threshold, and dates may change before or during the parliamentary vote."
+    - "Whether the 100bn band edge applies to the tax base (as modeled, 101bn net wealth) or to net wealth (100bn) must be confirmed against the bill text. Summaries differ in wording."
+    - "Rounding to whole forints is an assumption. Confirm against the bill and the Art. (2017. évi CL. törvény) rounding rules."
+    - "Sources disagree on the start: some report first liability on the 2026-12-31 position, others say the tax applies from 2027-01-01."
+
+# Trusts and private foundations (vagyonkezelési adóalany) are taxpayers under the
+# draft, but no summary states whether they get the same HUF 1bn threshold.
+# No rule is recorded for them until the bill text is read.

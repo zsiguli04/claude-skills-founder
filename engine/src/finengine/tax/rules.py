@@ -32,6 +32,11 @@ class NoRuleError(LookupError):
     """No rule matches the lookup. The engine never falls back to another year."""
 
 
+# enacted: law in force or passed. draft: published bill, may still change.
+# proposed: announced only, no bill text.
+STATUSES = ("enacted", "draft", "proposed")
+
+
 @dataclass(frozen=True)
 class Source:
     citation: str
@@ -60,6 +65,14 @@ class Rule:
     rounding_mode: str
     source: Source
     supersedes: str | None = None
+    status: str = "enacted"
+    valuation_date: date | None = None
+    filing_due: date | None = None
+    notes: tuple[str, ...] = ()
+
+    @property
+    def is_enacted(self) -> bool:
+        return self.status == "enacted"
 
     @property
     def key(self) -> str:
@@ -138,6 +151,13 @@ def parse_rule(raw: dict, origin: str = "<rule>") -> Rule:
     if effective_to < effective_from:
         raise RuleError(f"{where}: effective_to is before effective_from")
 
+    status = raw.get("status", "enacted")
+    if status not in STATUSES:
+        raise RuleError(f"{where}: status must be one of {', '.join(STATUSES)}")
+    if status != "enacted" and not raw.get("notes"):
+        raise RuleError(f"{where}: a {status} rule needs notes saying what may still change")
+    optional_date = lambda name: None if raw.get(name) is None else _date(raw[name], f"{where}.{name}")
+
     return Rule(
         id=rid,
         version=int(raw.get("version", 1)),
@@ -152,6 +172,10 @@ def parse_rule(raw: dict, origin: str = "<rule>") -> Rule:
         rounding_mode=mode,
         source=source,
         supersedes=raw.get("supersedes"),
+        status=status,
+        valuation_date=optional_date("valuation_date"),
+        filing_due=optional_date("filing_due"),
+        notes=tuple(str(n) for n in raw.get("notes") or ()),
     )
 
 
@@ -170,14 +194,33 @@ class RuleSet:
     def __len__(self) -> int:
         return len(self._rules)
 
-    def find(self, jurisdiction: str, tax_type: str, tax_year: int, filing_status: str) -> Rule:
-        matches = [
+    def find(
+        self,
+        jurisdiction: str,
+        tax_type: str,
+        tax_year: int,
+        filing_status: str,
+        allow_unenacted: bool = False,
+    ) -> Rule:
+        """The current version of the matching rule.
+
+        Draft and proposed rules are skipped unless allow_unenacted is True, so
+        nobody computes a liability from a bill by accident.
+        """
+        candidates = [
             r
             for r in self._rules.values()
             if r.key not in self._superseded
             and (r.jurisdiction, r.tax_type, r.tax_year, r.filing_status)
             == (jurisdiction, tax_type, tax_year, filing_status)
         ]
+        matches = [r for r in candidates if allow_unenacted or r.is_enacted]
+        if candidates and not matches:
+            statuses = ", ".join(sorted({r.status for r in candidates}))
+            raise NoRuleError(
+                f"the only {tax_type} rule for {jurisdiction} {tax_year} {filing_status} is {statuses}, "
+                "not enacted. Pass allow_unenacted=True to model it."
+            )
         if not matches:
             raise NoRuleError(f"no {tax_type} rule for {jurisdiction} {tax_year} {filing_status}")
         if len(matches) > 1:

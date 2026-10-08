@@ -21,6 +21,7 @@ class BracketLine:
 @dataclass(frozen=True)
 class TaxResult:
     rule_key: str
+    rule_status: str
     citation: str
     taxable_amount: Decimal
     tax_unrounded: Decimal
@@ -30,7 +31,10 @@ class TaxResult:
     lines: tuple[BracketLine, ...]
 
     def explain(self) -> str:
-        out = [f"Rule {self.rule_key} ({self.citation}) on {self.taxable_amount}:"]
+        out = []
+        if self.rule_status != "enacted":
+            out.append(f"{self.rule_status.upper()} RULE: not law yet. This is an estimate of a proposal.")
+        out.append(f"Rule {self.rule_key} ({self.citation}) on {self.taxable_amount}:")
         for line in self.lines:
             upper = "and above" if line.upper is None else f"to {line.upper}"
             out.append(f"  {line.lower} {upper} at {line.rate}: {line.taxed_amount} taxed, {line.tax} tax")
@@ -64,6 +68,7 @@ def progressive_tax(rule: Rule, taxable_amount: Number) -> TaxResult:
     effective = total / amount if amount else Decimal(0)
     return TaxResult(
         rule_key=rule.key,
+        rule_status=rule.status,
         citation=rule.source.citation,
         taxable_amount=amount,
         tax_unrounded=total,

@@ -38,7 +38,27 @@ print(progressive_tax(rule, "50000").explain())
 
 ## Tax rule files
 
-See `tests/fixtures/tax/zz-income-2026.yaml` for the format. `ZZ` is a made-up jurisdiction for tests. There are no real tax rules here yet. Add them with the `tax-researcher` agent so each one is cited from a primary source.
+Real rules live in `rules/<country>/`, each with a research record. `tests/fixtures/tax/` holds `ZZ`, a made-up jurisdiction for tests only.
+
+Every rule has a `status`: `enacted`, `draft` (a published bill), or `proposed` (announced, no text). `RuleSet.find` skips anything not enacted unless you pass `allow_unenacted=True`, and the result's `explain()` starts with a warning.
+
+### Hungary (`rules/hu/`)
+
+| Rule | Status | Notes |
+|:-----|:-------|:------|
+| SZJA 2026, flat 15% | enacted | Allowances not modeled |
+| Vagyonadó 2026 (wealth tax) | **draft** | Bill under public consultation until 2026-10-14. 1% on net wealth above HUF 1bn, 1.5% on the base above HUF 100bn. Spouses assessed separately |
+
+`finengine.tax.hu_vagyonado` turns a list of assets and debts into the tax: real estate valuation by the draft's purchase-price rules, ownership shares, residency scope, and a line-by-line explanation. Read `rules/hu/RESEARCH.md` first: the bill text was not read directly, and eight questions are open.
+
+```python
+from finengine.tax import load_rules
+from finengine.tax.hu_vagyonado import Asset, Debt, compute
+
+rule = load_rules("rules/hu").find("HU", "wealth", 2026, "individual", allow_unenacted=True)
+result = compute(rule, [Asset.of("Budapest flat", "1800000000", "purchase price")], [Debt.of("Mortgage", "300000000")])
+print(result.explain())   # net 1.5bn, tax 5,000,000 HUF, marked DRAFT
+```
 
 ## Tests
 
@@ -55,4 +75,5 @@ Expected values come from hand calculations, `fractions.Fraction`, or the `stati
 - Three-statement model with integrity checks (`financial-modeling` skill)
 - Multi-asset Monte Carlo with a correlation matrix
 - Withdrawal strategies beyond fixed real amount, and taxes inside projections
-- Precedent transactions, real tax rule sets, report generation
+- Vagyonadó: unlisted-company formula, movables, FX conversion, trusts and foundations, deferral, exit tax
+- Precedent transactions, report generation
