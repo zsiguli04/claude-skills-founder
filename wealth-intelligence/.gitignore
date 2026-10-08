@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+node_modules/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.sqlite3
+*.log
+# Private documents and exports never go into git
+uploads/
+exports/
