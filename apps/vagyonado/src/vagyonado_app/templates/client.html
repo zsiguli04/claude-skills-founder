@@ -8,10 +8,7 @@
       · <a href="/clients/{{ client.id }}/edit">Szerkesztés</a></p>
     {% if client.notes %}<p class="notes">{{ client.notes }}</p>{% endif %}
   </div>
-  <form method="post" action="/clients/{{ client.id }}/calculate">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button>Számítás mentése és jelentés</button>
-  </form>
+  <a class="button" href="#mentes">Számítás mentése és jelentés</a>
 </div>
 
 {% if preview_error %}<p class="error">{{ preview_error }}</p>{% endif %}
@@ -101,6 +98,32 @@
     <button>Tartozás hozzáadása</button>
   </form>
   {% if not client.resident %}<p class="hint">Külföldi illetőségűnél csak a figyelembe vett vagyonelemhez kötött tartozást vonjuk le (feltételezés, a tervezet szövegével ellenőrizendő).</p>{% endif %}
+</section>
+
+{% if analysis %}
+<section class="card analysis">
+  <div class="heading">
+    <h2>Elemzés a tanácsadáshoz</h2>
+    <form method="get" class="growth">
+      <label>Hozam a kitekintéshez (%) <input name="growth" value="{{ (growth * 100) | round(1) }}" inputmode="decimal"></label>
+      <button>Frissítés</button>
+    </form>
+  </div>
+  {% with an = analysis %}{% include "_analysis.html" %}{% endwith %}
+</section>
+{% endif %}
+
+<section class="card" id="mentes">
+  <h2>Számítás mentése és jelentés</h2>
+  <form method="post" action="/clients/{{ client.id }}/calculate?growth={{ (growth * 100) | round(1) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Tanácsadói javaslatok az ügyfélnek (a jelentésbe kerül)
+      <textarea name="advisor_notes" rows="6" maxlength="10000"
+        placeholder="Pl. a rejtett tartalékot könyvvizsgálóval alá kell támasztani; a befizetés forrását 2027 júniusáig biztosítani kell; a közös ingatlan tulajdoni hányadait a tulajdoni lappal egyeztetni."></textarea>
+    </label>
+    <p class="hint">A mentett számítás a bemenetekkel, az elemzéssel és a javaslatokkal együtt változatlanul megmarad.</p>
+    <button>Számítás mentése és jelentés</button>
+  </form>
 </section>
 
 <section class="card">

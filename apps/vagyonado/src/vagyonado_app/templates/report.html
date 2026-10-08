@@ -60,6 +60,13 @@
     </tbody>
   </table>
 
+  {% if calc.advisor_notes %}
+  <h2>Tanácsadói javaslatok</h2>
+  <div class="advice">{{ calc.advisor_notes }}</div>
+  {% endif %}
+
+  {% if out.analysis %}{% with an = out.analysis %}{% include "_analysis.html" %}{% endwith %}{% endif %}
+
   <h2>Feltételezések és nyitott kérdések</h2>
   <ul>
     {% for n in (out.rule.notes_hu or out.rule.notes) %}<li>{{ n }}</li>{% endfor %}

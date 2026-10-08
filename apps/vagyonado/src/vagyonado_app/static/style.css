@@ -89,3 +89,22 @@ details summary { cursor: pointer; font-weight: 500; }
   body { background: #fff; color: #000; }
   .card, .summary div { border-color: #999; }
 }
+.findings { list-style: none; padding: 0; margin: 0 0 8px; }
+.finding { border: 1px solid var(--border); border-left-width: 4px; border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.finding p { margin: 4px 0 0; font-size: 14px; }
+.finding .level { display: inline-block; font-size: 12px; font-weight: 600; margin-right: 6px; text-transform: uppercase; }
+.finding.action { border-left-color: var(--error); }
+.finding.action .level { color: var(--error); }
+.finding.warning { border-left-color: var(--warn-border); }
+.finding.warning .level { color: var(--warn-border); }
+.finding.info { border-left-color: var(--accent); }
+.finding.info .level { color: var(--accent); }
+.analysis h2 + p.hint { margin-top: -6px; }
+.analysis h2:not(:first-child) { margin-top: 20px; }
+td.base { font-weight: 600; }
+form.growth { display: flex; gap: 8px; align-items: end; }
+form.growth label { margin: 0; font-size: 13px; }
+form.growth input { width: 90px; }
+form.growth button { padding: 8px 10px; }
+.advice { white-space: pre-wrap; border: 1px solid var(--border); border-radius: 6px; padding: 12px; background: var(--surface); }
+@media print { .finding { break-inside: avoid; } }

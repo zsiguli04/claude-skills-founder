@@ -16,6 +16,11 @@ Minden számot a [`finengine`](../../engine/README.md) motor számol; a szabály
 - **Mentességek:** személyes ingóság 1 millió, gépkocsi 10 millió, műtárgy és ékszer 3 millió Ft-ig automatikusan kimarad.
 - **Tartozások**, fedezetként megjelölt vagyonelemmel.
 - **Élő előnézet** az ügyfél oldalán, **mentett számítások** teljes bemenettel és eredménnyel (később is pontosan visszakereshető), **nyomtatható jelentés** (Ctrl+P, PDF-be is) és JSON-export.
+- **Elemzés a tanácsadáshoz** az ügyfél oldalán és a jelentésben:
+  - *megállapítások* (teendő, kockázat, figyelem): 1 milliárdos határ közelében lévő nettó vagyon, likviditási kockázat (a becsült adó több, mint a pénz, betét, értékpapír és kripto), alátámasztandó nulla rejtett tartalék, kedvezményhatár közeli tulajdoni hányad, mentességi határ közeli ingóság, dokumentálandó ingatlanérték-módszer, külföldi vagyon árfolyama és be nem számítható külföldi adója, külföldi illetőség, házastársak és családtagok, határidők;
+  - *érzékenységvizsgálat*: az adó, ha az ingatlanok, cégrészesedések vagy értékpapírok értéke -20% és +20% között változik;
+  - *ötéves kitekintés* állítható hozammal, változatlan szabályt feltételezve.
+- **Tanácsadói javaslatok:** a mentéskor beírt szöveg a jelentésbe kerül. A javaslatot mindig a tanácsadó fogalmazza meg; a program csak az anyagot készíti elő hozzá. A „határ közelében” sávok (10%, 20%, 3 százalékpont) a program saját ellenőrzési szabályai, nem a törvény részei.
 - **Biztonság:** belépés jelszóval, CSRF-védelem minden űrlapon, belépési próbálkozások korlátozása, szigorú biztonsági fejlécek, csak hozzáfűzhető napló minden módosításról és megtekintésről.
 
 Házastársakat és nagykorú családtagokat külön ügyfélként kell felvenni (mindenkinek saját 1 milliárdos határa van). Az egymással kapcsolatban álló vagyonkezelési konstrukciókat egy ügyfélként (közösen egy határ).

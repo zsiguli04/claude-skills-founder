@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from vagyonado_app import services
+from vagyonado_app import advisory, services
 from vagyonado_app.auth import DUMMY_HASH, LoginThrottle, verify_password
 from vagyonado_app.config import Settings
 from vagyonado_app.db import Database, now
@@ -109,6 +109,13 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Nincs ilyen ügyfél.")
         return row
 
+    def growth_of(request: Request) -> Decimal:
+        try:
+            g = parse_percent(request.query_params.get("growth", "5"))
+        except ParseError:
+            return Decimal("0.05")
+        return g if Decimal("-0.5") <= g <= Decimal("0.5") else Decimal("0.05")
+
     def client_page(request: Request, client_id: int, status: int = 200, **extra: Any) -> HTMLResponse:
         with db.connect() as conn:
             client = get_client(conn, client_id)
@@ -119,15 +126,19 @@ def create_app(settings: Settings) -> FastAPI:
             calcs = conn.execute(
                 "SELECT c.id, c.created_at, c.rule_key, c.rule_status, c.result, u.name AS by_name FROM calculations c "
                 "JOIN users u ON u.id = c.created_by WHERE c.client_id = ? ORDER BY c.id DESC", (client_id,)).fetchall()
-        preview, preview_error = None, None
+        preview, preview_error, analysis = None, None, None
+        growth = growth_of(request)
         try:
             rule = rulebook.wealth_rule(client["kind"])
-            preview = services.calculate(rule, client, list(assets), list(debts)).output
+            calc = services.calculate(rule, client, list(assets), list(debts))
+            preview = calc.output
+            analysis = advisory.analysis(rule, client, list(assets), list(debts), calc, growth)
         except services.ValidationError as exc:
             preview_error = str(exc)
         history = [dict(c) | {"tax": json.loads(c["result"])["tax"]} for c in calcs]
         return render(request, "client.html", status, client=client, assets=assets, debts=debts,
-                      calcs=history, preview=preview, preview_error=preview_error, **extra)
+                      calcs=history, preview=preview, preview_error=preview_error, analysis=analysis,
+                      growth=growth, **extra)
 
     # Auth
 
@@ -385,21 +396,24 @@ def create_app(settings: Settings) -> FastAPI:
     @app.post("/clients/{client_id}/calculate")
     async def save_calculation(request: Request, client_id: int):
         uid = user_id(request)
-        await form(request)
+        f = await form(request)
+        notes = f.get("advisor_notes", "").strip()[:10000]
         with db.connect() as conn:
             client = get_client(conn, client_id)
             assets = conn.execute("SELECT * FROM assets WHERE client_id = ? ORDER BY id", (client_id,)).fetchall()
             debts = conn.execute("SELECT * FROM debts WHERE client_id = ? ORDER BY id", (client_id,)).fetchall()
         try:
-            calc = services.calculate(rulebook.wealth_rule(client["kind"]), client, list(assets), list(debts))
+            rule = rulebook.wealth_rule(client["kind"])
+            calc = services.calculate(rule, client, list(assets), list(debts))
+            calc.output["analysis"] = advisory.analysis(rule, client, list(assets), list(debts), calc, growth_of(request))
         except services.ValidationError as exc:
             return client_page(request, client_id, 400, preview_error=str(exc))
         with db.connect() as conn:
             cur = conn.execute(
                 "INSERT INTO calculations (client_id, rule_key, rule_status, engine_version, app_version, inputs, "
-                "result, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "result, advisor_notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (client_id, calc.rule.key, calc.rule.status, calc.output["engine_version"], calc.output["app_version"],
-                 json.dumps(calc.inputs, ensure_ascii=False), json.dumps(calc.output, ensure_ascii=False), uid, now()))
+                 json.dumps(calc.inputs, ensure_ascii=False), json.dumps(calc.output, ensure_ascii=False), notes, uid, now()))
             db.audit(conn, uid, "create", "calculation", cur.lastrowid, {"client_id": client_id})
         return RedirectResponse(f"/calculations/{cur.lastrowid}", status_code=303)
 
@@ -424,7 +438,7 @@ def create_app(settings: Settings) -> FastAPI:
                 raise HTTPException(status_code=404, detail="Nincs ilyen számítás.")
             db.audit(conn, uid, "export", "calculation", calc_id)
         body = {"id": row["id"], "created_at": row["created_at"], "inputs": json.loads(row["inputs"]),
-                "result": json.loads(row["result"])}
+                "result": json.loads(row["result"]), "advisor_notes": row["advisor_notes"]}
         return Response(json.dumps(body, ensure_ascii=False, indent=2), media_type="application/json",
                         headers={"Content-Disposition": f'attachment; filename="vagyonado-{calc_id}.json"'})
 

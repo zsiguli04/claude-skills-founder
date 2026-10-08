@@ -196,11 +196,19 @@ class Calculation:
     output: dict[str, Any]
 
 
-def calculate(rule: Rule, client: Any, asset_rows: list[Any], debt_rows: list[Any]) -> Calculation:
+def calculate(
+    rule: Rule,
+    client: Any,
+    asset_rows: list[Any],
+    debt_rows: list[Any],
+    scale: dict[str, Decimal] | None = None,
+) -> Calculation:
+    """Run the engine. `scale` multiplies asset values by category, for what-if analysis."""
     assets, asset_inputs, names = [], [], {}
     for row in asset_rows:
         v = stored_valuation(rule, row)
-        assets.append(Asset.of(row["name"], v.value, v.method, row["location"], v.ownership_share, row["category"]))
+        factor = (scale or {}).get(row["category"], Decimal(1))
+        assets.append(Asset.of(row["name"], v.value * factor, v.method, row["location"], v.ownership_share, row["category"]))
         names[row["id"]] = row["name"]
         asset_inputs.append({
             "name": row["name"], "category": row["category"], "location": row["location"],

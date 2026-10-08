@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS calculations (
     app_version TEXT NOT NULL,
     inputs TEXT NOT NULL,
     result TEXT NOT NULL,
+    advisor_notes TEXT NOT NULL DEFAULT '',
     created_by INTEGER NOT NULL REFERENCES users(id),
     created_at TEXT NOT NULL
 );
@@ -101,6 +102,14 @@ class Database:
         self.path = str(path)
         with self.connect() as conn:
             conn.executescript(SCHEMA)
+            self._migrate(conn)
+
+    @staticmethod
+    def _migrate(conn: sqlite3.Connection) -> None:
+        """Add columns introduced after the first release to existing databases."""
+        columns = {r["name"] for r in conn.execute("PRAGMA table_info(calculations)")}
+        if "advisor_notes" not in columns:
+            conn.execute("ALTER TABLE calculations ADD COLUMN advisor_notes TEXT NOT NULL DEFAULT ''")
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:

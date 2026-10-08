@@ -1,0 +1,41 @@
+{# Expects `an` (advisory.analysis output). #}
+{% set LEVELS = {"action": "Teendő", "warning": "Kockázat", "info": "Figyelem"} %}
+<h2>Megállapítások</h2>
+{% if an.findings %}
+<ul class="findings">
+  {% for f in an.findings %}
+  <li class="finding {{ f.level }}">
+    <span class="level">{{ LEVELS[f.level] }}</span>
+    <strong>{{ f.title }}</strong>
+    <p>{{ f.detail }}</p>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">Nincs megállapítás.</p>
+{% endif %}
+
+{% if an.scenarios %}
+<h2>Érzékenységvizsgálat</h2>
+<p class="hint">Becsült adó, ha egy vagyoncsoport értéke változik, minden más változatlan.</p>
+<table>
+  <thead><tr><th>Vagyoncsoport</th>{% for s in an.scenario_steps %}<th class="num">{{ "+" if s|float > 0 else "" }}{{ s | percent(0) }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in an.scenarios %}
+    <tr><td>{{ row.group }}</td>{% for t in row.taxes %}<td class="num{{ ' base' if loop.index == 3 else '' }}">{{ t | huf }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Ötéves kitekintés</h2>
+<p class="hint">Feltételezés: a nettó vagyon az adó befizetése után évi {{ an.projection_growth | percent(1) }} hozammal nő, és minden évben a mostani szabály érvényes.
+Ez szemléltetés, nem előrejelzés.</p>
+<table>
+  <thead><tr><th>Év</th><th class="num">Nettó vagyon a fordulónapon</th><th class="num">Becsült adó</th><th class="num">Összesen eddig</th></tr></thead>
+  <tbody>
+  {% for p in an.projection %}
+    <tr><td>{{ p.year }}</td><td class="num">{{ p.wealth | huf }}</td><td class="num">{{ p.tax | huf }}</td><td class="num">{{ p.cumulative | huf }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
