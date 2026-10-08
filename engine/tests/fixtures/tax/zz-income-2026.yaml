@@ -1,0 +1,38 @@
+# Fictional jurisdiction for tests only.
+- id: zz-income-single
+  version: 1
+  jurisdiction: ZZ
+  tax_type: income
+  tax_year: 2026
+  filing_status: single
+  effective_from: 2026-01-01
+  effective_to: 2026-12-31
+  brackets:
+    - { up_to: "10000", rate: "0.10" }
+    - { up_to: "40000", rate: "0.20" }
+    - { up_to: null, rate: "0.30" }
+  rounding: { quantum: "1", mode: half_up }
+  source:
+    citation: "Test fixture, version 1"
+    url: "https://example.invalid/zz/income/2026/v1"
+    retrieved: 2026-01-15
+
+# Correction: the middle bracket rate was published wrong in version 1.
+- id: zz-income-single
+  version: 2
+  supersedes: zz-income-single@1
+  jurisdiction: ZZ
+  tax_type: income
+  tax_year: 2026
+  filing_status: single
+  effective_from: 2026-01-01
+  effective_to: 2026-12-31
+  brackets:
+    - { up_to: "10000", rate: "0.10" }
+    - { up_to: "40000", rate: "0.25" }
+    - { up_to: null, rate: "0.35" }
+  rounding: { quantum: "1", mode: half_up }
+  source:
+    citation: "Test fixture, version 2"
+    url: "https://example.invalid/zz/income/2026/v2"
+    retrieved: 2026-02-01

@@ -2,7 +2,7 @@
 
 Project-scoped Claude Code configuration for building a financial engine: models, valuation, tax rules, wealth projections, and the data, security, and reporting work around them.
 
-This folder is separate from the `founder` plugin in `skills/`. Claude Code loads it automatically when you open this repo.
+This folder is separate from the `founder` plugin in `skills/`. Claude Code loads it automatically when you open this repo. The engine these skills describe lives in [`engine/`](../engine/README.md).
 
 ```
 .claude/
