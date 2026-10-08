@@ -32,6 +32,70 @@
     - "Rounding to whole forints is an assumption. Confirm against the bill and the Art. (2017. évi CL. törvény) rounding rules."
     - "Sources disagree on the start: some report first liability on the 2026-12-31 position, others say the tax applies from 2027-01-01."
 
-# Trusts and private foundations (vagyonkezelési adóalany) are taxpayers under the
-# draft, but no summary states whether they get the same HUF 1bn threshold.
-# No rule is recorded for them until the bill text is read.
+# Version 2: adds the exemption limits and valuation parameters reported from
+# the draft, and settles the band edge (an adviser's reading of the text says
+# 1.5% applies to the base above 100bn, so net wealth above 101bn, as in v1).
+- id: hu-vagyonado-individual
+  version: 2
+  supersedes: hu-vagyonado-individual@1
+  status: draft
+  jurisdiction: HU
+  tax_type: wealth
+  tax_year: 2026
+  filing_status: individual   # each spouse and adult family member separately, each with their own 1bn threshold
+  effective_from: 2026-12-15
+  effective_to: 2026-12-31
+  valuation_date: 2026-12-31
+  filing_due: 2027-08-31
+  brackets: &vagyonado_brackets
+    - { up_to: "1000000000", rate: "0" }
+    - { up_to: "101000000000", rate: "0.01" }
+    - { up_to: null, rate: "0.015" }
+  rounding: { quantum: "1", mode: half_up }
+  parameters: &vagyonado_parameters
+    # Exemption limits, per item (draft 2026-10-06, as summarized)
+    personal_movable_exempt_up_to: "1000000"    # personal-use movables worth at most 1m each are left out
+    art_jewelry_exempt_up_to: "3000000"         # art, collections, jewelry count only above 3m each
+    car_exempt_up_to: "10000000"                # cars with a computed value of at most 10m are left out
+    # Unlisted company shares: (equity + 2 x earning value) / 3 x ownership share
+    capitalization_rate: "0.15"                 # earning value = average after-tax profit of the last 3 closed years / 0.15
+    hidden_reserves_equity_over: "500000000"    # above this equity, add audited hidden reserves
+    holding_participation_ratio: "0.9"          # participations at least 90% of assets: equity only, no earning value
+    minority_small_below: "0.33"                # holding below 33%: 30% discount
+    minority_small_discount: "0.30"
+    minority_mid_up_to: "0.50"                  # holding from 33% to 50%: 25% discount
+    minority_mid_discount: "0.25"
+  source: &vagyonado_source
+    citation: "Pénzügyminisztérium: törvényjavaslat a vagyonadóról, társadalmi egyeztetés (2026-10-06), 1. melléklet for the company formula. Not read directly: details from Andersen, BDO, RSM, mfor, Privátbankár, Klubrádió summaries."
+    url: "https://kormany.hu/dokumentumtar/tarsadalmi-egyeztetes-a-vagyonadorol-szolo-torvenyjavaslatrol"
+    retrieved: 2026-10-08
+  notes:
+    - "Draft bill under public consultation until 2026-10-14. Rates, threshold, exemptions, and dates may change before or during the parliamentary vote."
+    - "Rounding to whole forints is an assumption. Confirm against the bill and the Art. (2017. évi CL. törvény) rounding rules."
+    - "Sources disagree on the start: some report first liability on the 2026-12-31 position, others say the tax applies from 2027-01-01."
+    - "Minority discount edges (exactly 33%, exactly 50%) are assumptions: 33% gets 25%, 50% gets 25%, above 50% none."
+    - "Assets given to a minor child count in the parent's base unless inherited or earned by the child. Not modeled: put them in the parent's asset list."
+    - "Foreign wealth taxes are not creditable; only local property-type taxes may be. Not modeled."
+
+# Trusts and private foundations (vagyonkezelési adóalany). Same threshold and
+# rates as individuals, but linked structures (same or related settlors) share
+# one 1bn threshold. Assess linked structures together with compute().
+- id: hu-vagyonado-trust
+  version: 1
+  status: draft
+  jurisdiction: HU
+  tax_type: wealth
+  tax_year: 2026
+  filing_status: trust
+  effective_from: 2026-12-15
+  effective_to: 2026-12-31
+  valuation_date: 2026-12-31
+  filing_due: 2027-08-31
+  brackets: *vagyonado_brackets
+  rounding: { quantum: "1", mode: half_up }
+  parameters: *vagyonado_parameters
+  source: *vagyonado_source
+  notes:
+    - "Draft bill under public consultation until 2026-10-14."
+    - "Linked trusts and foundations of the same or related settlors share one 1bn threshold: pass all their assets to one compute() call."
+    - "A foreign structure becomes a Hungarian taxpayer if it is effectively managed from Hungary. Residency is the caller's call."

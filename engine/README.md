@@ -40,16 +40,16 @@ print(progressive_tax(rule, "50000").explain())
 
 Real rules live in `rules/<country>/`, each with a research record. `tests/fixtures/tax/` holds `ZZ`, a made-up jurisdiction for tests only.
 
-Every rule has a `status`: `enacted`, `draft` (a published bill), or `proposed` (announced, no text). `RuleSet.find` skips anything not enacted unless you pass `allow_unenacted=True`, and the result's `explain()` starts with a warning.
+Rules can carry named `parameters` (limits, ratios) that tax-specific modules read with `rule.param(name)`, so no threshold lives in code. Every rule has a `status`: `enacted`, `draft` (a published bill), or `proposed` (announced, no text). `RuleSet.find` skips anything not enacted unless you pass `allow_unenacted=True`, and the result's `explain()` starts with a warning.
 
 ### Hungary (`rules/hu/`)
 
 | Rule | Status | Notes |
 |:-----|:-------|:------|
 | SZJA 2026, flat 15% | enacted | Allowances not modeled |
-| Vagyonadó 2026 (wealth tax) | **draft** | Bill under public consultation until 2026-10-14. 1% on net wealth above HUF 1bn, 1.5% on the base above HUF 100bn. Spouses assessed separately |
+| Vagyonadó 2026, individuals (v2) and trusts | **draft** | Bill under public consultation until 2026-10-14. 1% on net wealth above HUF 1bn, 1.5% on the base above HUF 100bn. Spouses assessed separately; linked trusts share one threshold |
 
-`finengine.tax.hu_vagyonado` turns a list of assets and debts into the tax: real estate valuation by the draft's purchase-price rules, ownership shares, residency scope, and a line-by-line explanation. Read `rules/hu/RESEARCH.md` first: the bill text was not read directly, and eight questions are open.
+`finengine.tax.hu_vagyonado` turns a list of assets and debts into the tax: real estate by the draft's purchase-price rules, unlisted company shares by the draft formula (with hidden reserves, holding companies, and minority discounts), exemption limits, ownership shares, the non-resident scope by asset type, and a line-by-line explanation. Every limit and ratio is a parameter in the rule file. Read `rules/hu/RESEARCH.md` first: the bill text was not read directly, and six questions are open.
 
 ```python
 from finengine.tax import load_rules
@@ -75,5 +75,5 @@ Expected values come from hand calculations, `fractions.Fraction`, or the `stati
 - Three-statement model with integrity checks (`financial-modeling` skill)
 - Multi-asset Monte Carlo with a correlation matrix
 - Withdrawal strategies beyond fixed real amount, and taxes inside projections
-- Vagyonadó: unlisted-company formula, movables, FX conversion, trusts and foundations, deferral, exit tax
+- Vagyonadó: FX conversion, deferral, exit tax
 - Precedent transactions, report generation

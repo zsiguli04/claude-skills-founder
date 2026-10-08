@@ -8,7 +8,7 @@ import pytest
 from hypothesis import given, strategies as st
 
 from finengine.tax import NoRuleError, RuleError, load_rules, progressive_tax
-from finengine.tax.hu_vagyonado import Asset, Debt, NeedsValuation, compute, real_estate_value
+from finengine.tax.hu_vagyonado import Asset, Debt, NeedsValuation, compute, real_estate_value, unlisted_company_value
 from finengine.tax.rules import parse_rule
 
 RULES = Path(__file__).parents[1] / "rules" / "hu"
@@ -27,12 +27,16 @@ def wealth_rule(rules):
 
 
 def test_hungarian_rules_load(rules):
-    assert len(rules) == 2
+    assert len(rules) == 4  # SZJA, vagyonadó individual v1 and v2, vagyonadó trust
 
 
 def test_draft_wealth_tax_is_refused_by_default(rules):
     with pytest.raises(NoRuleError, match="draft"):
         rules.find("HU", "wealth", 2026, "individual")
+
+
+def test_latest_draft_version_is_used(wealth_rule):
+    assert wealth_rule.key == "hu-vagyonado-individual@2"
 
 
 def test_draft_rule_carries_its_status_and_dates(wealth_rule):
@@ -117,8 +121,8 @@ def test_resident_counts_foreign_assets_and_all_debts(wealth_rule):
 
 def test_non_resident_counts_only_hungarian_assets_and_their_debts(wealth_rule):
     assets = [
-        Asset.of("Budapest office", "2500000000", "valuation"),
-        Asset.of("London house", "3000000000", "valuation", location="GB"),
+        Asset.of("Budapest office", "2500000000", "valuation", category="real_estate"),
+        Asset.of("London house", "3000000000", "valuation", location="GB", category="real_estate"),
     ]
     debts = [
         Debt.of("Office loan", "500000000", secured_on="Budapest office"),
@@ -164,3 +168,117 @@ def test_unenacted_rule_must_explain_itself():
         parse_rule(raw)
     with pytest.raises(RuleError, match="status"):
         parse_rule({**raw, "status": "rumoured", "notes": ["n"]})
+
+
+# Unlisted company formula. Expected values are the worked examples published in
+# Privátbankár's summary of the draft, recomputed by hand.
+
+def test_company_formula_published_example_1(wealth_rule):
+    # Equity 1.2bn, average profit 240m: earning value 240m / 0.15 = 1.6bn
+    # (1.2bn + 2 x 1.6bn) / 3 = 4.4bn / 3
+    value, method = unlisted_company_value(wealth_rule, "1200000000", ["240000000"] * 3, 1, hidden_reserves=0)
+    assert value == D("4400000000") / 3
+    assert "hidden reserves" in method
+
+
+def test_company_formula_published_example_2(wealth_rule):
+    # Equity 20m, average profit 150m: earning value 1bn; (20m + 2bn) / 3 = 673.33m
+    value, _ = unlisted_company_value(wealth_rule, "20000000", ["150000000"] * 3, 1)
+    assert value.quantize(D("1")) == D("673333333")
+
+
+def test_company_negative_average_profit_gives_zero_earning_value(wealth_rule):
+    # (300m + 0) / 3 = 100m
+    value, _ = unlisted_company_value(wealth_rule, "300000000", ["-50000000", "10000000", "10000000"], 1)
+    assert value == D("100000000")
+
+
+def test_company_hidden_reserves_required_above_500m_equity(wealth_rule):
+    with pytest.raises(ValueError, match="hidden reserves"):
+        unlisted_company_value(wealth_rule, "600000000", ["0", "0", "0"], 1)
+    # 600m + 150m reserves, no profit: 750m / 3 = 250m
+    value, _ = unlisted_company_value(wealth_rule, "600000000", ["0", "0", "0"], 1, hidden_reserves="150000000")
+    assert value == D("250000000")
+
+
+def test_holding_company_uses_equity_only(wealth_rule):
+    value, method = unlisted_company_value(
+        wealth_rule, "400000000", ["900000000"] * 3, 1, participations_to_assets="0.95"
+    )
+    assert value == D("400000000")
+    assert "holding" in method
+
+
+@pytest.mark.parametrize(
+    "share, expected",
+    [
+        # Whole company: (300m + 0) / 3 = 100m
+        ("1", "100000000"),
+        ("0.6", "60000000"),           # majority: no discount
+        ("0.5", "37500000"),           # 50m less 25%
+        ("0.33", "24750000"),          # 33m less 25%
+        ("0.2", "14000000"),           # 20m less 30%
+    ],
+)
+def test_minority_discounts(wealth_rule, share, expected):
+    value, _ = unlisted_company_value(wealth_rule, "300000000", ["0", "0", "0"], share)
+    assert value == D(expected)
+
+
+@pytest.mark.parametrize(
+    "category, value, counted",
+    [
+        ("personal_movable", "1000000", False),
+        ("personal_movable", "1000001", True),
+        ("car", "10000000", False),
+        ("car", "12000000", True),
+        ("art_jewelry", "3000000", False),
+        ("art_jewelry", "3000001", True),
+        ("cash", "1", True),
+    ],
+)
+def test_exemption_limits(wealth_rule, category, value, counted):
+    result = compute(wealth_rule, [Asset.of("Item", value, "valuation", category=category)])
+    assert result.lines[0].included is counted
+    assert result.net_wealth == (D(value) if counted else 0)
+
+
+def test_non_resident_scope_by_category(wealth_rule):
+    assets = [
+        Asset.of("HU flat", "100", "x", category="real_estate"),
+        Asset.of("Usufruct", "100", "x", category="property_right"),
+        Asset.of("HU Kft. stake", "100", "x", category="company_share"),
+        Asset.of("Cyprus property company", "100", "x", location="CY", category="hu_property_company"),
+        Asset.of("HU bank deposit", "100", "x", category="cash"),
+        Asset.of("OTP shares", "100", "x", category="listed_security"),
+        Asset.of("German GmbH stake", "100", "x", location="DE", category="company_share"),
+    ]
+    result = compute(wealth_rule, assets, resident=False)
+    assert [line.included for line in result.lines] == [True, True, True, True, False, False, False]
+    assert result.net_wealth == D("400")
+
+
+def test_unknown_category_rejected():
+    with pytest.raises(ValueError, match="category"):
+        Asset.of("Boat", "1", "x", category="yacht")
+
+
+def test_linked_trusts_share_one_threshold(rules):
+    trust = rules.find("HU", "wealth", 2026, "trust", allow_unenacted=True)
+    # Two linked foundations of 1.5bn each. Assessed together: 3bn, base 2bn, tax 20m.
+    # Assessed separately each would pay 5m, 10m in total.
+    together = compute(trust, [Asset.of("Foundation A", "1500000000", "x"), Asset.of("Foundation B", "1500000000", "x")])
+    assert together.tax.tax == D("20000000")
+
+
+def test_rule_parameters_must_be_quoted_and_present(wealth_rule):
+    with pytest.raises(RuleError):
+        wealth_rule.param("no_such_parameter")
+    raw = {
+        "id": "x", "jurisdiction": "ZZ", "tax_type": "wealth", "tax_year": 2026,
+        "filing_status": "individual", "effective_from": "2026-01-01", "effective_to": "2026-12-31",
+        "brackets": [{"up_to": None, "rate": "0.01"}], "parameters": {"limit": 0.5},
+        "source": {"citation": "c", "url": "u", "retrieved": "2026-01-01"},
+    }
+    with pytest.raises(RuleError, match="quoted"):
+        parse_rule(raw)

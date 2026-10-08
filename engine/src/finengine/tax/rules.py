@@ -7,7 +7,7 @@ YAML never turns them into floats. See tests/fixtures/tax/ for the format.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, ROUND_DOWN, ROUND_UP, Decimal
 from pathlib import Path
@@ -69,6 +69,14 @@ class Rule:
     valuation_date: date | None = None
     filing_due: date | None = None
     notes: tuple[str, ...] = ()
+    # Named thresholds and ratios a tax-specific module needs (exemption limits,
+    # capitalization rates). Kept in the rule file so no number lives in code.
+    parameters: dict[str, Decimal] = field(default_factory=dict)
+
+    def param(self, name: str) -> Decimal:
+        if name not in self.parameters:
+            raise RuleError(f"{self.key} has no parameter {name!r}")
+        return self.parameters[name]
 
     @property
     def is_enacted(self) -> bool:
@@ -156,6 +164,10 @@ def parse_rule(raw: dict, origin: str = "<rule>") -> Rule:
         raise RuleError(f"{where}: status must be one of {', '.join(STATUSES)}")
     if status != "enacted" and not raw.get("notes"):
         raise RuleError(f"{where}: a {status} rule needs notes saying what may still change")
+    raw_params = raw.get("parameters") or {}
+    if not isinstance(raw_params, dict):
+        raise RuleError(f"{where}: parameters must be a mapping")
+    parameters = {str(k): _decimal(v, f"{where}.parameters.{k}") for k, v in raw_params.items()}
     optional_date = lambda name: None if raw.get(name) is None else _date(raw[name], f"{where}.{name}")
 
     return Rule(
@@ -176,6 +188,7 @@ def parse_rule(raw: dict, origin: str = "<rule>") -> Rule:
         valuation_date=optional_date("valuation_date"),
         filing_due=optional_date("filing_due"),
         notes=tuple(str(n) for n in raw.get("notes") or ()),
+        parameters=parameters,
     )
 
 
